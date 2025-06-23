@@ -1,0 +1,66 @@
+# Istio VirtualService Configurations for Knative Services
+# These VirtualServices define routing rules for traffic coming through the Gateway
+# They route traffic to appropriate Knative services based on host and path
+
+# Virtual Service for Frontend Application
+# Routes all traffic for test.raydensolution.com to the frontend service
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: frontend-vs
+spec:
+  hosts:
+  - "test.raydensolution.com"
+  gateways:
+  - stateful-gateway
+  http:
+  - match:
+    - uri:
+        prefix: /
+    route:
+    - destination:
+        host: frontend-service
+        port:
+          number: 80
+    retries:
+      attempts: 3
+      perTryTimeout: 2s
+
+---
+# Virtual Service for API Gateway and Microservices
+# Routes traffic for api.raydensolution.com to different services based on path
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: api-vs
+spec:
+  # Host that this VirtualService handles
+  hosts:
+  - "api.raydensolution.com"
+  gateways:
+  - stateful-gateway
+  http:
+  - match:
+    - uri:
+        prefix: /ws
+    route:
+    - destination:
+        host: notification-service
+        port:
+          number: 8083
+    retries:
+      attempts: 3
+      perTryTimeout: 2s
+  # Product service - handles product-related API calls
+  - match:
+    - uri:
+        prefix: /
+    route:
+    - destination:
+        host: api-gateway
+        port:
+          number: 8080
+    retries:
+      attempts: 3
+      perTryTimeout: 2s
+  

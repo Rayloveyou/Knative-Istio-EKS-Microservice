@@ -1,0 +1,27 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: stateful-gateway
+spec:
+  # Selector to determine which Istio Ingress Gateway to use
+  # This should match the labels on your Istio Ingress Gateway deployment
+  selector:
+    istio: ingress
+  servers:
+  - port:
+      number: 80
+      name: http
+      protocol: HTTP
+    hosts:
+    - "test.raydensolution.com"    # Frontend application
+    - "api.raydensolution.com"     # API Gateway and microservices
+  # - port:
+  #     number: 443
+  #     name: https
+  #     protocol: HTTPS
+  #   tls:
+  #     mode: SIMPLE
+  #     credentialName: raydensolution-tls
+  #   hosts:
+  #   - "test.raydensolution.com"
+  #   - "api.raydensolution.com" 

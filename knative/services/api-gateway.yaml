@@ -1,0 +1,44 @@
+# API Gateway Knative Service Configuration
+# This service acts as the main entry point for all API requests
+# It routes requests to appropriate microservices based on the request path
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: api-gateway
+  namespace: lab
+spec:
+  template:
+    metadata:
+      annotations:
+        # Autoscaling configuration - keeps at least 1 replica running, scales up to 10
+        autoscaling.knative.dev/minScale: "1"
+        autoscaling.knative.dev/maxScale: "10"
+        # Traffic management - can be used for blue-green deployments
+        serving.knative.dev/rolloutDuration: "0"
+    spec:
+      # Container concurrency - how many requests each container can handle simultaneously
+      containerConcurrency: 100
+      # Request timeout - maximum time to wait for a response
+      timeoutSeconds: 300
+      containers:
+      - image: datnxdevops/knative-apigateway:latest
+        ports:
+        - containerPort: 8080
+        env:
+        # Service discovery - using short DNS names for inter-service communication
+        - name: ORDER_SERVICE_URI
+          value: "http://order-service:8081"
+        - name: PRODUCT_SERVICE_URI
+          value: "http://product-service:8082"
+        - name: IDENTITY_SERVICE_URI
+          value: "http://identity-service:9898"
+        - name: URL_VALIDATE_TOKEN
+          value: "http://identity-service:9898/auth/validate"
+        # Resource limits to prevent resource exhaustion
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m" 

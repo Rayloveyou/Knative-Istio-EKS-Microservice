@@ -1,0 +1,53 @@
+# Identity Service Knative Configuration
+# This service handles user authentication, authorization, and user management
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: identity-service
+  namespace: lab
+spec:
+  template:
+    metadata:
+      annotations:
+        # Autoscaling configuration - keeps at least 1 replica running, scales up to 10
+        autoscaling.knative.dev/minScale: "1"
+        autoscaling.knative.dev/maxScale: "10"
+        # Traffic management - can be used for blue-green deployments
+        serving.knative.dev/rolloutDuration: "0"
+    spec:
+      # Container concurrency - how many requests each container can handle simultaneously
+      containerConcurrency: 50
+      # Request timeout - maximum time to wait for a response
+      timeoutSeconds: 300
+      containers:
+      - image: datnxdevops/knative-identity:latest
+        ports:
+        - containerPort: 9898
+        env:
+        # Database configuration - connects to MySQL stateful service
+        - name: MYSQL_HOST
+          value: "mysql"
+        - name: MYSQL_PORT
+          value: "3306"
+        - name: MYSQL_DATABASE
+          value: "javatechie"
+        - name: MYSQL_USER
+          value: "root"
+        - name: MYSQL_PASSWORD
+          value: "root"
+        # Cache configuration - connects to Redis stateful service
+        - name: REDIS_HOST
+          value: "redis"
+        # Application configuration
+        - name: SPRING_APPLICATION_NAME
+          value: IDENTITY-SERVICE
+        - name: SERVER_PORT
+          value: "9898"
+        # Resource limits to prevent resource exhaustion
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m" 

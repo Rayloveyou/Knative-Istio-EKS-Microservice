@@ -1,0 +1,38 @@
+# Notification Service Knative Configuration
+# This service handles notifications and WebSocket connections
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: notification-service
+  namespace: lab
+spec:
+  template:
+    metadata:
+      annotations:
+        # Autoscaling configuration
+        autoscaling.knative.dev/minScale: "1"
+        autoscaling.knative.dev/maxScale: "10"
+        # Traffic management
+        serving.knative.dev/rolloutDuration: "0"
+    spec:
+      containerConcurrency: 50
+      timeoutSeconds: 300
+      containers:
+      - image: datnxdevops/knative-notification:latest
+        ports:
+        - containerPort: 8083
+        env:
+        # Kafka configuration - for consuming notification events
+        - name: KAFKA_HOST
+          value: "kafka"
+        - name: KAFKA_PORT
+          value: "9092"
+        - name: KAFKA_GROUP_ID
+          value: "notification-group"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m" 

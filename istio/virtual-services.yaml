@@ -1,0 +1,97 @@
+# Istio VirtualService Configurations for Knative Services
+# These VirtualServices define routing rules for traffic coming through the Gateway
+# They route traffic to appropriate Knative services based on host and path
+
+# Virtual Service for Frontend Application
+# Routes all traffic for test.raydensolution.com to the frontend service
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: frontend-vs
+  namespace: lab  
+spec:
+  # Host that this VirtualService handles
+  hosts:
+  - "test.raydensolution.com"
+  # Gateway that this VirtualService is attached to
+  gateways:
+  - knative-gateway
+  http:
+  # Route all traffic to the frontend service
+  - match:
+    - uri:
+        prefix: /
+    route:
+    - destination:
+        # Short DNS name since services are in same namespace
+        host: http://frontend-service.lab.svc.cluster.local
+        port:
+          number: 80
+      weight: 100  # 100% of traffic goes to this destination
+---
+# Virtual Service for API Gateway and Microservices
+# Routes traffic for api.raydensolution.com to different services based on path
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: api-vs
+  namespace: lab
+spec:
+  # Host that this VirtualService handles
+  hosts:
+  - "api.raydensolution.com"
+  # Gateway that this VirtualService is attached to
+  gateways:
+  - knative-gateway
+  http:
+  # WebSocket/Notification service - handles real-time notifications
+  - match:
+    - uri:
+        prefix: "/ws"
+    route:
+    - destination:
+        host: notification-service
+        port:
+          number: 80
+      weight: 100
+  
+  # Product service - handles product-related API calls
+  - match:
+    - uri:
+        prefix: "/products"
+    route:
+    - destination:
+        host: api-gateway
+        port:
+          number: 80
+      weight: 100
+  
+  # Order service - handles order-related API calls
+  - match:
+    - uri:
+        prefix: "/orders"
+    route:
+    - destination:
+        host: api-gateway
+        port:
+          number: 8080
+      weight: 100
+  
+  # Identity/Auth service - handles authentication and authorization
+  - match:
+    - uri:
+        prefix: "/auth"
+    route:
+    - destination:
+        host: api-gateway
+        port:
+          number: 80
+      weight: 100
+  
+  # API Gateway - default route (handles all other traffic)
+  - route:
+    - destination:
+        host: api-gateway
+        port:
+          number: 80
+      weight: 100 
