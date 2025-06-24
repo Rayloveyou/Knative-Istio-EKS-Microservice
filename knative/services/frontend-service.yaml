@@ -1,36 +1,28 @@
-# Frontend Service Knative Configuration
-# This service serves the web frontend application
 apiVersion: serving.knative.dev/v1
 kind: Service
 metadata:
   name: frontend-service
-  namespace: lab
+  namespace: default
 spec:
   template:
     metadata:
       annotations:
-        # Autoscaling configuration - keeps at least 1 replica running, scales up to 5
         autoscaling.knative.dev/minScale: "1"
-        autoscaling.knative.dev/maxScale: "5"
-        # Traffic management - can be used for blue-green deployments
+        autoscaling.knative.dev/maxScale: "10"
         serving.knative.dev/rolloutDuration: "0"
     spec:
-      # Container concurrency - how many requests each container can handle simultaneously
       containerConcurrency: 50
-      # Request timeout - maximum time to wait for a response
       timeoutSeconds: 300
       containers:
       - name: frontend
-        image: datnxdevops/knative-frontend:latest
+        image: datnxdevops/knative-frontend:knative
         imagePullPolicy: Always
         ports:
         - containerPort: 80
-        # Resource limits to prevent resource exhaustion
-        # Frontend requires less resources than backend services
         resources:
           requests:
             memory: "128Mi"
             cpu: "100m"
           limits:
             memory: "256Mi"
-            cpu: "200m" 
+            cpu: "200m"

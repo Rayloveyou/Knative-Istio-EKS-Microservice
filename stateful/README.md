@@ -1,3 +1,29 @@
+# Traditional Kubernetes (Stateful) Deployment Guide
+
+## 🏗️ Overview
+
+Thư mục này chứa các cấu hình triển khai application dạng truyền thống (Kubernetes Stateful), với hai phương án routing:
+- **ALB (AWS Application Load Balancer)**
+- **Istio (Service Mesh)**
+
+## 🚦 Deployment Flow
+
+1. Đảm bảo hạ tầng và các service core đã sẵn sàng ([terraform/README.md](../terraform/README.md), [kafka/README.md](../kafka/README.md), [mysql/README.md](../mysql/README.md), [redis/README.md](../redis/README.md))
+2. Chọn một trong hai phương án routing:
+   - [Triển khai với ALB](alb/README.md)
+   - [Triển khai với Istio](istio/README.md)
+3. Deploy các application service (xem [services/](services/))
+
+## 📚 Related Documentation
+- [Terraform README](../terraform/README.md)
+- [Kafka README](../kafka/README.md)
+- [MySQL README](../mysql/README.md)
+- [Redis README](../redis/README.md)
+- [Knative README](../knative/README.md)
+- [ALB README](alb/README.md)
+- [Istio README](istio/README.md)
+- [Services](services/)
+
 ## Tổng quan luồng triển khai
 
 1. **Triển khai các dịch vụ stateful (MySQL, Redis, Kafka, Zookeeper,...)**

@@ -322,3 +322,21 @@ helm upgrade kafka ./kafka -f kafka-values.yaml \
   --set kafka.auth.enabled=true \
   --set kafka.auth.tls.enabled=true
 ```
+
+## 🚦 Deployment Flow
+
+**Deploy Kafka after infrastructure is ready!**
+
+1. Ensure EKS cluster is ready (see [terraform/README.md](../terraform/README.md))
+2. Deploy Kafka & Zookeeper (this README)
+3. Deploy other core services: [MySQL](../mysql/README.md), [Redis](../redis/README.md)
+4. Deploy application layer:
+   - [Traditional Kubernetes (Stateful)](../stateful/README.md)
+   - [Knative + Istio](../knative/README.md)
+
+## 📚 Related Documentation
+- [Terraform README](../terraform/README.md)
+- [MySQL README](../mysql/README.md)
+- [Redis README](../redis/README.md)
+- [Knative README](../knative/README.md)
+- [Stateful README](../stateful/README.md)

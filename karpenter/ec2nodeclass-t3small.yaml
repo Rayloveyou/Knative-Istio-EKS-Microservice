@@ -1,0 +1,20 @@
+# EC2NodeClass cho Karpenter - chỉ dùng cho instance t3.small
+# Thay đổi các giá trị amiSelectorTerms nếu cần dùng AMI khác
+# Đảm bảo role, subnet, security group đã được tag đúng
+
+apiVersion: karpenter.k8s.aws/v1
+kind: EC2NodeClass
+metadata:
+  name: t3small
+spec:
+  role: "datnghiem-eks-KarpenterNodeRole" # Đúng tên role đã tạo
+  amiFamily: AL2023
+  amiSelectorTerms:
+    - alias: al2023@latest
+  # instanceProfile: "datnghiem-eks-KarpenterNodeInstanceProfile (dùng role thay cho instance profile)
+  subnetSelectorTerms:
+    - tags:
+        karpenter.sh/discovery: "datnghiem-eks"
+  securityGroupSelectorTerms:
+    - tags:
+        karpenter.sh/discovery: "datnghiem-eks"

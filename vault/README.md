@@ -386,3 +386,17 @@ kubectl exec -it $VAULT_POD -- vault write database/roles/mysql-role \
 3. **Token Policies**: Create specific policies for each application
 4. **Token TTL**: Set appropriate token time-to-live values
 5. **Key Rotation**: Regular rotation of secrets and keys
+
+## 🚦 Deployment Flow
+
+**Deploy Vault after EKS infrastructure is ready!**
+
+1. Ensure EKS cluster is ready (see [terraform/README.md](../terraform/README.md))
+2. Deploy Vault (this README)
+3. (Optional) Integrate with application layer for secrets
+
+## 📚 Related Documentation
+- [Terraform README](../terraform/README.md)
+- [MySQL README](../mysql/README.md)
+- [Knative README](../knative/README.md)
+- [Stateful README](../stateful/README.md)

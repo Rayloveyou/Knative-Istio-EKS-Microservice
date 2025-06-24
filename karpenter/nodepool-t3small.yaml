@@ -1,0 +1,31 @@
+# NodePool cho Karpenter - chỉ cho phép instance t3.small
+# Tham chiếu EC2NodeClass tên 'default' (đã tạo ở ec2nodeclass-t3small.yaml)
+# Khi apply, Karpenter chỉ scale ra node loại t3.small
+
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata:
+  name: t3small
+  namespace: karpenter
+spec:
+  template:
+    spec:
+      requirements:
+        - key: kubernetes.io/arch
+          operator: In
+          values: ["amd64"]
+        - key: kubernetes.io/os
+          operator: In
+          values: ["linux"]
+        - key: node.kubernetes.io/instance-type
+          operator: In
+          values: ["t3.small"]
+      nodeClassRef:
+        group: karpenter.k8s.aws
+        kind: EC2NodeClass
+        name: t3small
+  limits:
+    cpu: 1000
+  disruption:
+    consolidationPolicy: WhenEmptyOrUnderutilized
+    consolidateAfter: 1m

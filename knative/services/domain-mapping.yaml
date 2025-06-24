@@ -1,0 +1,62 @@
+# Frontend Service
+apiVersion: networking.internal.knative.dev/v1alpha1
+kind: ClusterDomainClaim
+metadata:
+  name: test.raydensolution.com
+spec:
+  namespace: default
+---
+apiVersion: serving.knative.dev/v1beta1
+kind: DomainMapping
+metadata:
+  name: test.raydensolution.com
+  namespace: default
+spec:
+  ref:
+    name: frontend-service
+    kind: Service
+    apiVersion: serving.knative.dev/v1
+---
+
+
+
+# API Gateway Service
+apiVersion: networking.internal.knative.dev/v1alpha1
+kind: ClusterDomainClaim
+metadata:
+  name: api.raydensolution.com
+spec:
+  namespace: default
+---
+apiVersion: serving.knative.dev/v1beta1
+kind: DomainMapping
+metadata:
+  name: api.raydensolution.com
+  namespace: default
+spec:
+  ref:
+    name: api-gateway
+    kind: Service
+    apiVersion: serving.knative.dev/v1
+---
+
+# Notification Service - WebSocket
+apiVersion: networking.internal.knative.dev/v1alpha1
+kind: ClusterDomainClaim
+metadata:
+  name: noti.raydensolution.com
+spec:
+  namespace: default
+---
+apiVersion: serving.knative.dev/v1beta1
+kind: DomainMapping
+metadata:
+  name: noti.raydensolution.com
+  namespace: default
+spec:
+  ref:
+    name: notification-service
+    kind: Service
+    apiVersion: serving.knative.dev/v1
+
+

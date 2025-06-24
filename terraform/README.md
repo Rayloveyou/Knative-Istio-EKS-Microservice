@@ -311,29 +311,6 @@ aws iam list-attached-role-policies --role-name <role-name>
 
 After infrastructure deployment:
 
-1. **Deploy ALB Controller**:
-   ```bash
-   cd ../stateful/resources
-   ./setup-alb-controller.sh
-   ```
-
-2. **Deploy Applications**:
-   ```bash
-   # Traditional deployment
-   cd .. && ./deploy_stateful.sh
-   
-   # Or Knative deployment
-   cd ../knative && ./deploy_knative.sh
-   ```
-
-3. **Configure DNS**:
-   - Point domains to Load Balancer DNS
-   - Configure SSL certificates
-
-4. **Set up Monitoring**:
-   - Deploy Prometheus and Grafana
-   - Configure logging (ELK stack)
-
 ## 📚 Additional Resources
 
 - [EKS Documentation](https://docs.aws.amazon.com/eks/)
@@ -363,12 +340,6 @@ terraform plan
 terraform apply
 ```
 
-### Scaling Infrastructure
-
-```bash
-# Update node group sizes
-terraform apply -var="min_size=5" -var="max_size=10"
-```
 
 ## 🧹 Cleanup
 
@@ -397,3 +368,24 @@ For issues and questions:
 2. Review Terraform provider documentation
 3. Check AWS CloudTrail for API errors
 4. Verify IAM permissions and policies 
+
+## 🚦 Deployment Flow
+
+**This is the first step: Initialize infrastructure before deploying any services!**
+
+1. Deploy infrastructure (this README)
+2. Deploy core services: [Kafka](../kafka/README.md), [MySQL](../mysql/README.md), [Redis](../redis/README.md)
+3. (Optional) Deploy [Karpenter](../karpenter/README.md) for autoscaling
+4. (Optional) Deploy [Vault](../vault/README.md) for secrets management
+5. Deploy application layer:
+   - [Traditional Kubernetes (Stateful)](../stateful/README.md)
+   - [Knative + Istio](../knative/README.md)
+
+## 📚 Related Documentation
+- [Kafka README](../kafka/README.md)
+- [MySQL README](../mysql/README.md)
+- [Redis README](../redis/README.md)
+- [Karpenter README](../karpenter/README.md)
+- [Vault README](../vault/README.md)
+- [Knative README](../knative/README.md)
+- [Stateful README](../stateful/README.md) 

@@ -1,3 +1,5 @@
+
+
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "~> 20.31"
@@ -22,7 +24,7 @@ module "eks" {
   eks_managed_node_groups = {
     example = {
       instance_types = ["t3.medium"]
-      min_size       = 2
+      min_size       = 0
       max_size       = 5
       desired_size   = 2
 
@@ -48,3 +50,13 @@ module "eks" {
 
 }
 
+module "karpenter_role" {
+  source            = "./iam-karpenter-role"
+  eks_oidc_provider = module.eks.oidc_provider
+  cluster_name      = module.eks.cluster_name
+  namespace         = "karpenter"
+}
+
+output "karpenter_role" {
+  value = module.karpenter_role
+}

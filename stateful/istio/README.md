@@ -1,3 +1,20 @@
+# Istio-based Application Deployment Guide
+
+## 🚦 Deployment Flow
+
+**Deploy application after core services (Kafka, MySQL, Redis) are ready!**
+
+1. Ensure EKS cluster and core services are ready ([terraform/README.md](../../terraform/README.md), [kafka/README.md](../../kafka/README.md), [mysql/README.md](../../mysql/README.md), [redis/README.md](../../redis/README.md))
+2. Install Istio (see below)
+3. Deploy application services (see ../services/)
+
+## 📚 Related Documentation
+- [Terraform README](../../terraform/README.md)
+- [Kafka README](../../kafka/README.md)
+- [MySQL README](../../mysql/README.md)
+- [Redis README](../../redis/README.md)
+- [Knative README](../../knative/README.md)
+
 * Install Istioctl
 curl -L https://istio.io/downloadIstio | ISTIO_VERSION=1.15.1 sh -
 mv istio-1.15.1/bin/istioctl /user/local/bin

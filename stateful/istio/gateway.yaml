@@ -6,7 +6,7 @@ spec:
   # Selector to determine which Istio Ingress Gateway to use
   # This should match the labels on your Istio Ingress Gateway deployment
   selector:
-    istio: ingress
+    istio: ingressgateway
   servers:
   - port:
       number: 80

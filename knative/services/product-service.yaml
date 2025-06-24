@@ -1,45 +1,30 @@
-# Product Service Knative Configuration
-# This service handles product management operations (CRUD operations)
 apiVersion: serving.knative.dev/v1
 kind: Service
 metadata:
   name: product-service
-  namespace: lab
 spec:
   template:
     metadata:
       annotations:
-        # Autoscaling configuration
         autoscaling.knative.dev/minScale: "1"
         autoscaling.knative.dev/maxScale: "10"
-        # Traffic management
         serving.knative.dev/rolloutDuration: "0"
     spec:
-      containerConcurrency: 50
-      timeoutSeconds: 300
       containers:
-      - image: datnxdevops/knative-product:latest
-        ports:
-        - containerPort: 8082
-        env:
-        # Database configuration - connects to MySQL stateful service
-        - name: MYSQL_HOST
-          value: "mysql"
-        - name: MYSQL_PORT
-          value: "3306"
-        - name: MYSQL_DATABASE
-          value: "javatechie"
-        - name: MYSQL_USER
-          value: "root"
-        - name: MYSQL_PASSWORD
-          value: "root"
-        # Service discovery - using short DNS names for inter-service communication
-        - name: URL_IDENTITY_SERVICE
-          value: "http://identity-service:9898"
-        resources:
-          requests:
-            memory: "256Mi"
-            cpu: "250m"
-          limits:
-            memory: "512Mi"
-            cpu: "500m" 
+        - name: product-service
+          image: datnxdevops/knative-product:latest
+          env:
+            - name: MYSQL_HOST
+              value: mysql
+            - name: MYSQL_PORT
+              value: "3306"
+            - name: MYSQL_DATABASE
+              value: javatechie
+            - name: MYSQL_USER
+              value: root
+            - name: MYSQL_PASSWORD
+              value: root
+            - name: URL_IDENTITY_SERVICE
+              value: http://identity-service.default
+          ports:
+            - containerPort: 8082
