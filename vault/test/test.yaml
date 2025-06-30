@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tinhbt
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tinhbt
+  template:
+    metadata:
+      labels:
+        app: tinhbt
+      annotations:
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/role: "nginx-role"
+        vault.hashicorp.com/agent-inject-secret-mysecret: "kv/mysecret"
+    spec:
+      serviceAccountName: tinhbt
+      containers:
+        - name: app
+          image: nginx
+      #     volumeMounts:
+      #       - name: vault-secret
+      #         mountPath: /vault/secrets
+      #         readOnly: true
+      # volumes:
+      #   - name: vault-secret
+      #     emptyDir: {}
+

@@ -1,54 +1,80 @@
-# Vault Infrastructure
+# HashiCorp Vault Infrastructure
 
-This directory contains the HashiCorp Vault deployment configuration using **Helm Chart** for secure secrets management in the microservices architecture.
+This directory contains the HashiCorp Vault deployment configuration using **Helm Chart** for secure secrets management in the microservices architecture on EKS.
 
 ## 📋 Overview
 
-Vault is used for centralized secrets management, providing secure storage and access to sensitive information such as:
+HashiCorp Vault is a powerful secrets management solution that provides centralized, secure storage and access to sensitive information such as:
 - Database credentials
-- API keys
+- API keys and tokens
 - TLS certificates
 - Application secrets
 - Encryption keys
+- Kubernetes service account tokens
 
 ## 🏗️ Architecture
 
 ```
-┌─────────────┐    ┌─────────────┐
-│    Vault    │    │Microservices│
-│   (Port     │◄──►│   (API      │
-│    8200)    │    │  Clients)   │
-└─────────────┘    └─────────────┘
+┌─────────────────┐    ┌─────────────────┐
+│   Vault Server  │    │  Microservices  │
+│   (Port 8200)   │◄──►│   (API Clients) │
+│                 │    │                 │
+│ ┌─────────────┐ │    │ ┌─────────────┐ │
+│ │   KV Store  │ │    │ │   Vault     │ │
+│ │   Secrets   │ │    │ │   Agent     │ │
+│ └─────────────┘ │    │ └─────────────┘ │
+│ ┌─────────────┐ │    └─────────────────┘
+│ │ Kubernetes  │ │
+│ │   Auth      │ │
+│ └─────────────┘ │
+└─────────────────┘
        │
        ▼
-┌─────────────┐
-│  Persistent │
-│   Storage   │
-└─────────────┘
+┌─────────────────┐
+│  Persistent     │
+│   Storage       │
+│  (EBS Volume)   │
+└─────────────────┘
 ```
 
-## 📁 Files
+## 📁 Directory Structure
 
-- `vault-values.yaml` - **Helm values** for Vault deployment
-- `vault-ing.yaml` - **Ingress configuration** for external access
-- `deploy_vault.sh` - Deployment script using Helm
-- `README.md` - This documentation file
+```
+vault/
+├── README.md                 # This documentation
+├── deploy_vault.sh          # Automated deployment script
+├── uninstall_vault.sh       # Cleanup script
+├── new-values.yaml          # Helm values configuration
+├── vault-kv-policy.hcl      # Vault policy for KV access
+├── cluster-keys.json        # Generated cluster keys (auto-created)
+└── test/                    # Test configurations
+    ├── sa.yaml             # Service account for testing
+    └── test.yaml           # Test deployment with Vault agent
+```
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 
-1. **Kubernetes cluster** with kubectl configured
+1. **EKS Cluster** with kubectl configured
 2. **Helm** (>= 3.0) installed
 3. **Storage class** available for persistent volumes
 4. **ALB Controller** installed (for ingress)
+5. **jq** installed for JSON parsing
 
-### Deployment
+### Automated Deployment
 
 ```bash
-# Deploy Vault using Helm
+# Deploy Vault using the automated script
 ./deploy_vault.sh
 ```
+
+The script will:
+- Check prerequisites
+- Add HashiCorp Helm repository
+- Deploy Vault using Helm chart
+- Initialize and unseal Vault
+- Configure basic authentication
 
 ### Manual Deployment
 
@@ -58,7 +84,7 @@ helm repo add hashicorp https://helm.releases.hashicorp.com
 helm repo update
 
 # Deploy Vault with custom values
-helm install vault hashicorp/vault -f vault-values.yaml
+helm install vault hashicorp/vault -f new-values.yaml
 
 # Wait for Vault to be ready
 kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=vault --timeout=300s
@@ -68,335 +94,222 @@ kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=vault --timeout
 
 ### Helm Chart Configuration
 
-The Vault deployment uses the official HashiCorp Helm chart with the following configuration:
+The Vault deployment uses the official HashiCorp Helm chart with the following key configurations:
 
 - **Chart**: `hashicorp/vault`
-- **Storage**: File storage backend (for development)
-- **UI**: Enabled for web interface
-- **Ingress**: ALB Controller integration
-- **Security**: TLS disabled for development
+- **Storage**: File storage backend (suitable for development/testing)
+- **UI**: Enabled for web interface access
+- **Ingress**: ALB Controller integration for external access
+- **Security**: TLS disabled for development (enable for production)
+- **Replicas**: Single instance for development
 
 ### Key Configuration Files
 
-#### `vault-values.yaml`
-```yaml
-# Vault server configuration
-server:
-  enabled: true
-  replicas: 1
-  ingress:
-    enabled: true
-    className: alb
-    hosts:
-      - host: vault.raydensolution.com
+#### `new-values.yaml`
+Main Helm values file containing:
+- Vault server configuration
+- Storage settings
+- UI and ingress configuration
+- Resource limits and requests
+- Security settings
+
+#### `vault-kv-policy.hcl`
+Vault policy defining permissions:
+```hcl
+path "secret/*" {
+  capabilities = ["create", "read", "update", "delete", "list"]
+}
+
+path "kv/*" {
+  capabilities = ["read", "list"]
+}
 ```
 
-#### `vault-ing.yaml`
-```yaml
-# Ingress configuration for external access
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: vault-ingres
-  annotations:
-    alb.ingress.kubernetes.io/scheme: internet-facing
-    alb.ingress.kubernetes.io/target-type: ip
-```
-
-## 🌐 Accessing Vault
-
-### From within the cluster
-
-```bash
-# Vault host: vault
-# Vault port: 8200
-# Vault UI: http://vault:8200/ui
-```
-
-### From outside the cluster
-
-```bash
-# Port forward Vault
-kubectl port-forward service/vault 8200:8200
-
-# Access Vault UI
-open http://localhost:8200/ui
-```
-
-### External access via Ingress
-
-```bash
-# Access via domain
-open http://vault.raydensolution.com
-```
-
-## 🔐 Initial Setup
+## 🔐 Initialization and Setup
 
 ### 1. Initialize Vault
 
+After deployment, Vault needs to be initialized:
+
 ```bash
-# Get Vault pod name
-VAULT_POD=$(kubectl get pods -l app.kubernetes.io/name=vault -o jsonpath='{.items[0].metadata.name}')
-
-# Initialize Vault
-kubectl exec -it $VAULT_POD -- vault operator init
-
-# This will output 5 unseal keys and a root token
-# Save these securely!
+# Initialize Vault (creates cluster-keys.json)
+kubectl exec vault-0 -- vault operator init \
+    -key-shares=1 \
+    -key-threshold=1 \
+    -format=json > cluster-keys.json
 ```
 
 ### 2. Unseal Vault
 
 ```bash
-# Unseal Vault (requires 3 of 5 keys)
-kubectl exec -it $VAULT_POD -- vault operator unseal <key1>
-kubectl exec -it $VAULT_POD -- vault operator unseal <key2>
-kubectl exec -it $VAULT_POD -- vault operator unseal <key3>
+# Extract unseal key
+VAULT_UNSEAL_KEY=$(cat cluster-keys.json | jq -r ".unseal_keys_b64[]")
+
+# Unseal Vault
+kubectl exec vault-0 -- vault operator unseal $VAULT_UNSEAL_KEY
 ```
 
-### 3. Login to Vault
+### 3. Login and Configure
 
 ```bash
-# Login with root token
-kubectl exec -it $VAULT_POD -- vault login <root-token>
+# Get root token
+CLUSTER_ROOT_TOKEN=$(cat cluster-keys.json | jq -r ".root_token")
+
+# Login to Vault
+kubectl exec vault-0 -- vault login $CLUSTER_ROOT_TOKEN
+
+# Enable KV secrets engine
+kubectl exec vault-0 -- vault secrets enable kv
+
+# Enable Kubernetes auth method
+kubectl exec vault-0 -- vault auth enable kubernetes
 ```
 
-## 🔧 Vault Configuration
-
-### Enable Secret Engines
+### 4. Configure Kubernetes Authentication
 
 ```bash
-# Enable key-value secrets engine
-kubectl exec -it $VAULT_POD -- vault secrets enable -path=secret kv-v2
+# Get Kubernetes cluster information
+KUBERNETES_HOST=$(kubectl config view --raw --minify --flatten -o jsonpath='{.clusters[0].cluster.server}')
+KUBERNETES_CA_CERT=$(kubectl config view --raw --minify --flatten -o jsonpath='{.clusters[0].cluster.certificate-authority-data}' | base64 --decode)
 
-# Enable database secrets engine
-kubectl exec -it $VAULT_POD -- vault secrets enable database
+# Configure Kubernetes auth
+kubectl exec vault-0 -- vault write auth/kubernetes/config \
+    kubernetes_host="$KUBERNETES_HOST" \
+    kubernetes_ca_cert="$KUBERNETES_CA_CERT" \
+    token_reviewer_jwt="$(kubectl get secret $(kubectl get serviceaccount tinhbt -o jsonpath='{.secrets[0].name}') -o jsonpath='{.data.token}' | base64 --decode)"
 ```
 
-### Create Policies
+### 5. Create Policy and Role
 
 ```bash
-# Create policy for application access
-kubectl exec -it $VAULT_POD -- vault policy write app-policy - <<EOF
-path "secret/data/*" {
-  capabilities = ["read"]
-}
+# Create policy
+kubectl exec vault-0 -- vault policy write tinhbt-kv-policy vault-kv-policy.hcl
 
-path "database/creds/*" {
-  capabilities = ["read"]
-}
-EOF
+# Create Kubernetes role
+kubectl exec vault-0 -- vault write auth/kubernetes/role/nginx-role \
+    bound_service_account_names=tinhbt \
+    bound_service_account_namespaces=default \
+    policies=tinhbt-kv-policy \
+    ttl=1h
 ```
 
-### Create AppRole
+## 🧪 Testing the Setup
+
+### 1. Create Test Service Account
 
 ```bash
-# Enable AppRole auth method
-kubectl exec -it $VAULT_POD -- vault auth enable approle
-
-# Create AppRole for applications
-kubectl exec -it $VAULT_POD -- vault write auth/approle/role/app-role \
-    token_policies="app-policy" \
-    token_ttl=1h \
-    token_max_ttl=4h
+kubectl apply -f test/sa.yaml
 ```
 
-## 📊 Monitoring
-
-### Check Status
+### 2. Deploy Test Application
 
 ```bash
-# Check Vault pod
+kubectl apply -f test/test.yaml
+```
+
+The test deployment includes:
+- Vault agent injection annotations
+- Service account binding
+- Secret mounting configuration
+
+### 3. Verify Secret Injection
+
+```bash
+# Check if secrets are injected
+kubectl exec deployment/tinhbt -- ls -la /vault/secrets/
+kubectl exec deployment/tinhbt -- cat /vault/secrets/mysecret
+```
+
+## 🔍 Monitoring and Troubleshooting
+
+### Check Vault Status
+
+```bash
+# Check Vault pod status
 kubectl get pods -l app.kubernetes.io/name=vault
 
 # Check Vault service
 kubectl get svc | grep vault
 
-# Check Vault ingress
-kubectl get ingress | grep vault
-
-# Check persistent volumes
-kubectl get pvc
-kubectl get pv
+# Check Vault logs
+kubectl logs vault-0
 ```
 
-### View Logs
+### Access Vault UI
 
 ```bash
-# Vault logs
-kubectl logs -l app.kubernetes.io/name=vault
+# Port forward to access Vault UI
+kubectl port-forward vault-0 8200:8200
 ```
 
-### Check Vault Status
-
-```bash
-# Get Vault pod name
-VAULT_POD=$(kubectl get pods -l app.kubernetes.io/name=vault -o jsonpath='{.items[0].metadata.name}')
-
-# Check Vault status
-kubectl exec -it $VAULT_POD -- vault status
-```
-
-### Helm Status
-
-```bash
-# Check Helm release status
-helm status vault
-
-# Get Helm values
-helm get values vault
-```
-
-## 🔍 Troubleshooting
+Then access: `http://localhost:8200`
 
 ### Common Issues
 
-#### 1. Vault not starting
-
-```bash
-# Check pod events
-kubectl describe pod <vault-pod>
-
-# Check pod logs
-kubectl logs <vault-pod>
-
-# Check Helm release events
-helm get events vault
-```
-
-#### 2. Storage issues
-
-```bash
-# Check persistent volume claims
-kubectl get pvc
-
-# Check persistent volumes
-kubectl get pv
-
-# Check storage class
-kubectl get storageclass
-```
-
-#### 3. Vault sealed
-
-```bash
-# Check Vault status
-kubectl exec -it <vault-pod> -- vault status
-
-# If sealed, unseal with keys
-kubectl exec -it <vault-pod> -- vault operator unseal <key>
-```
-
-#### 4. Ingress issues
-
-```bash
-# Check ingress status
-kubectl describe ingress vault-ingres
-
-# Check ALB Controller logs
-kubectl logs -n kube-system deployment/aws-load-balancer-controller
-```
+1. **Vault not unsealed**: Run unseal commands
+2. **Authentication failures**: Check Kubernetes auth configuration
+3. **Secret injection not working**: Verify annotations and service account
 
 ## 🧹 Cleanup
 
-### Remove Vault using Helm
+### Uninstall Vault
 
 ```bash
-# Uninstall Vault Helm release
+# Use the cleanup script
+./uninstall_vault.sh
+```
+
+### Manual Cleanup
+
+```bash
+# Uninstall Helm release
 helm uninstall vault
 
-# Delete persistent volume claims
-kubectl delete pvc --all
+# Delete persistent volumes (if needed)
+kubectl delete pvc -l app.kubernetes.io/name=vault
 ```
 
-### Manual cleanup
+## 🔒 Security Considerations
 
-```bash
-# Delete all Vault resources
-kubectl delete all -l app.kubernetes.io/name=vault
+### Production Recommendations
 
-# Delete ingress
-kubectl delete ingress vault-ingres
+1. **Enable TLS**: Configure proper TLS certificates
+2. **Use Auto-unseal**: Implement auto-unseal with AWS KMS or other cloud KMS
+3. **Enable Audit Logging**: Configure audit devices
+4. **Use Vault Agent**: Deploy Vault agent for better security
+5. **Implement RBAC**: Use proper role-based access control
+6. **Regular Key Rotation**: Implement key rotation policies
 
-# Delete persistent volumes
-kubectl delete pvc --all
-kubectl delete pv --all
-```
+### Development vs Production
+
+| Feature | Development | Production |
+|---------|-------------|------------|
+| TLS | Disabled | Enabled |
+| Storage | File | Consul/Raft |
+| Auto-unseal | Manual | AWS KMS |
+| Audit Logging | Disabled | Enabled |
+| Replicas | 1 | 3+ |
 
 ## 📚 Additional Resources
 
-- [Vault Documentation](https://www.vaultproject.io/docs/)
-- [Vault Kubernetes Integration](https://www.vaultproject.io/docs/platform/k8s)
-- [Vault AppRole Auth Method](https://www.vaultproject.io/docs/auth/approle)
-- [Vault Database Secrets Engine](https://www.vaultproject.io/docs/secrets/databases)
+- [HashiCorp Vault Documentation](https://www.vaultproject.io/docs)
 - [Vault Helm Chart](https://github.com/hashicorp/vault-helm)
+- [Kubernetes Auth Method](https://www.vaultproject.io/docs/auth/kubernetes)
+- [Vault Agent](https://www.vaultproject.io/docs/agent)
 
-## 🔗 Integration with Microservices
+## 🤝 Contributing
 
-### Service Configuration
+When making changes to the Vault configuration:
 
-Services should be configured to use Vault for secrets:
+1. Update `new-values.yaml` for Helm configuration changes
+2. Modify `vault-kv-policy.hcl` for policy changes
+3. Update test configurations in `test/` directory
+4. Update this README for any new procedures
 
-```yaml
-vault:
-  address: http://vault:8200
-  auth:
-    method: approle
-    role-id: <role-id>
-    secret-id: <secret-id>
-  secrets:
-    database: database/creds/mysql-role
-    api-keys: secret/data/api-keys
-```
+---
 
-### Example: MySQL Credentials
+**Note**: This setup is configured for development/testing environments. For production deployments, ensure proper security configurations are in place.
 
-```bash
-# Configure MySQL database connection
-kubectl exec -it $VAULT_POD -- vault write database/config/mysql \
-    plugin_name=mysql-database-plugin \
-    connection_url="{{username}}:{{password}}@tcp(mysql:3306)/" \
-    allowed_roles="mysql-role"
 
-# Create MySQL role
-kubectl exec -it $VAULT_POD -- vault write database/roles/mysql-role \
-    db_name=mysql \
-    creation_statements="CREATE USER '{{name}}'@'%' IDENTIFIED BY '{{password}}';GRANT SELECT ON *.* TO '{{name}}'@'%';" \
-    default_ttl="1h" \
-    max_ttl="24h"
-```
 
-## 🔐 Security Best Practices
 
-### Production Considerations
-
-1. **High Availability**: Use multiple Vault instances with auto-unseal
-2. **Storage Backend**: Use distributed storage (Consul, etcd)
-3. **Authentication**: Use Kubernetes service accounts or AppRole
-4. **Encryption**: Enable TLS for all communications
-5. **Audit Logging**: Enable audit logging for compliance
-6. **Backup**: Regular backup of Vault data and configuration
-7. **Monitoring**: Monitor Vault health and performance
-8. **Access Control**: Implement least privilege access policies
-
-### Key Management
-
-1. **Unseal Keys**: Store unseal keys securely (HSM, cloud KMS)
-2. **Root Token**: Use root token only for initial setup
-3. **Token Policies**: Create specific policies for each application
-4. **Token TTL**: Set appropriate token time-to-live values
-5. **Key Rotation**: Regular rotation of secrets and keys
-
-## 🚦 Deployment Flow
-
-**Deploy Vault after EKS infrastructure is ready!**
-
-1. Ensure EKS cluster is ready (see [terraform/README.md](../terraform/README.md))
-2. Deploy Vault (this README)
-3. (Optional) Integrate with application layer for secrets
-
-## 📚 Related Documentation
-- [Terraform README](../terraform/README.md)
-- [MySQL README](../mysql/README.md)
-- [Knative README](../knative/README.md)
-- [Stateful README](../stateful/README.md)

@@ -17,8 +17,8 @@ global:
   # imagePullSecrets:
   #   - name: image-pull-secret
 
-  # TLS for end-to-end encrypted transport
-  tlsDisable: true
+  # TLS for end-to-end encrypted transport://111
+  tlsDisable: true 
 
   # External vault server address for the injector and CSI provider to use.
   # Setting this will disable deployment of a vault server.
@@ -406,20 +406,21 @@ server:
   # If deployment is on OpenShift, the following block is ignored.
   # In order to expose the service, use the route section below
   ingress:
-    enabled: false
+    enabled: true
     labels: {}
       # traffic: external
-    annotations: {}
-      # |
-      # kubernetes.io/ingress.class: nginx
-      # kubernetes.io/tls-acme: "true"
-      #   or
-      # kubernetes.io/ingress.class: nginx
-      # kubernetes.io/tls-acme: "true"
+    annotations: 
+      kubernetes.io/ingress.class: alb
+      alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-1:115228050885:certificate/9914e83b-0665-4661-940b-92799fb090d6
+      alb.ingress.kubernetes.io/target-type: ip
+      alb.ingress.kubernetes.io/scheme: internet-facing
+      alb.ingress.kubernetes.io/actions.ssl-redirect: '{"Type": "redirect", "RedirectConfig": { "Protocol": "HTTPS", "Port": "443", "StatusCode": "HTTP_301"}}'
+      alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS": 443}]'
+      alb.ingress.kubernetes.io/ssl-redirect: '443'
 
     # Optionally use ingressClassName instead of deprecated annotation.
     # See: https://kubernetes.io/docs/concepts/services-networking/ingress/#deprecated-annotation
-    ingressClassName: ""
+    ingressClassName: "alb"
 
     # As of Kubernetes 1.19, all Ingress Paths must have a pathType configured. The default value below should be sufficient in most cases.
     # See: https://kubernetes.io/docs/concepts/services-networking/ingress/#path-types for other possible values.
@@ -429,8 +430,9 @@ server:
     # configure the ingress to point to the Vault active service.
     activeService: true
     hosts:
-      - host: chart-example.local
-        paths: []
+      - host: vault.raydensolution.com
+        paths: 
+         - /
     ## Extra paths to prepend to the host configuration. This is useful when working with annotation based services.
     extraPaths: []
     # - path: /*
@@ -440,9 +442,9 @@ server:
     #       port:
     #         number: use-annotation
     tls: []
-    #  - secretName: chart-example-tls
+    #  - secretName: vault-tls
     #    hosts:
-    #      - chart-example.local
+    #      - vault.raydensolution.com
 
   # hostAliases is a list of aliases to be added to /etc/hosts. Specified as a YAML list.
   hostAliases: []
@@ -774,7 +776,7 @@ server:
   dataStorage:
     enabled: true
     # Size of the PVC created
-    size: 2Gi
+    size: 10Gi
     # Location where the PVC will be mounted.
     mountPath: "/vault/data"
     # Name of the storage class to use.  If null it will use the
@@ -803,7 +805,7 @@ server:
   auditStorage:
     enabled: false
     # Size of the PVC created
-    size: 2Gi
+    size: 10Gi
     # Location where the PVC will be mounted.
     mountPath: "/vault/audit"
     # Name of the storage class to use.  If null it will use the
@@ -923,7 +925,7 @@ server:
           #}
         }
 
-        storage "raft" {  
+        storage "raft" {
           path = "/vault/data"
         }
 
@@ -1041,7 +1043,7 @@ ui:
   # serviceType can be used to control the type of service created. For
   # example, setting this to "LoadBalancer" will create an external load
   # balancer (for supported K8S installations) to access the UI.
-  enabled: true
+  enabled: false
   publishNotReadyAddresses: true
   # The service should only contain selectors for active Vault pod
   activeVaultPodOnly: false

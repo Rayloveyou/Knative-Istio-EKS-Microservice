@@ -17,5 +17,20 @@
 - [Knative README](../../knative/README.md)
 - [Istio README](../istio/README.md)
 
+
+## ℹ️ Install
+- Get the Role Arn in Terraform created
+- helm repo add eks https://aws.github.io/eks-charts
+- helm repo update eks
+- helm pull eks/aws-load-balancer-controller --version 1.13.0 --untar
+- config:
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: 
+    eks.amazonaws.com/role-arn: <arn>>
+clusterName: <your-cluser-name>
+
 ## ℹ️ Note
-- Đây là một trong hai phương án triển khai application (bên cạnh Istio/Knative). Bạn có thể chọn ALB hoặc Istio/Knative tuỳ theo nhu cầu. 
+- This is one method for deploying application (beside Istio/Knative). You can choose ALB or Istio/Knative. 

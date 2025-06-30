@@ -70,3 +70,6 @@ kubectl get pod -n karpenter
 
 
 
+
+
+scale deploy karpenter xuống 0 -> taint node karpenter (hoặc xoá afinity của pod dùng karpenter)

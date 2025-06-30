@@ -26,6 +26,80 @@ This project demonstrates a complete microservices architecture with:
    - [Traditional Kubernetes (Stateful)](stateful/README.md) (ALB hoặc Istio)
    - [Knative + Istio](knative/README.md)
 
+## 🔐 Vault Secrets Management
+
+### Overview
+HashiCorp Vault provides centralized secrets management for the microservices architecture, ensuring secure storage and access to sensitive information such as:
+- Database credentials (MySQL, Redis)
+- API keys and tokens
+- TLS certificates
+- Application secrets
+- Kubernetes service account tokens
+
+### Architecture Integration
+```
+┌─────────────────┐    ┌─────────────────┐
+│   Vault Server  │    │  Microservices  │
+│   (Port 8200)   │◄──►│   (API Clients) │
+│                 │    │                 │
+│ ┌─────────────┐ │    │ ┌─────────────┐ │
+│ │   KV Store  │ │    │ │   Vault     │ │
+│ │   Secrets   │ │    │ │   Agent     │ │
+│ └─────────────┘ │    │ └─────────────┘ │
+│ ┌─────────────┐ │    └─────────────────┘
+│ │ Kubernetes  │ │
+│ │   Auth      │ │
+│ └─────────────┘ │
+└─────────────────┘
+       │
+       ▼
+┌─────────────────┐
+│  Persistent     │
+│   Storage       │
+│  (EBS Volume)   │
+└─────────────────┘
+```
+
+### Quick Setup
+```bash
+# Navigate to Vault directory
+cd vault
+
+# Deploy Vault using automated script
+./deploy_vault.sh
+
+# Initialize and configure Vault
+kubectl exec vault-0 -- vault operator init \
+    -key-shares=1 \
+    -key-threshold=1 \
+    -format=json > cluster-keys.json
+
+# Unseal Vault
+VAULT_UNSEAL_KEY=$(cat cluster-keys.json | jq -r ".unseal_keys_b64[]")
+kubectl exec vault-0 -- vault operator unseal $VAULT_UNSEAL_KEY
+
+# Login and enable secrets engine
+CLUSTER_ROOT_TOKEN=$(cat cluster-keys.json | jq -r ".root_token")
+kubectl exec vault-0 -- vault login $CLUSTER_ROOT_TOKEN
+kubectl exec vault-0 -- vault secrets enable kv
+```
+
+### Integration with Microservices
+Vault integrates with microservices through:
+- **Kubernetes Authentication**: Service accounts authenticate with Vault
+- **Vault Agent Injection**: Automatic secret injection into pods
+- **KV Secrets Engine**: Key-value storage for application secrets
+- **Policy-based Access Control**: Fine-grained permissions
+
+### Security Features
+- **Auto-unseal** (production): AWS KMS integration
+- **Audit Logging**: Complete audit trail
+- **TLS Encryption**: Secure communication
+- **Token-based Authentication**: Time-limited access tokens
+- **Role-based Access Control**: Granular permissions
+
+For detailed setup and configuration, see [Vault README](vault/README.md).
+
 ## 🧩 Service Technology Stack
 
 | Service              | Technology   |
